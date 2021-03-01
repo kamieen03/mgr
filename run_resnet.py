@@ -3,15 +3,23 @@
 import torchvision
 import torch
 from architectures import PlainResNet18
+import sys
 
-def make_data():
-    transforms = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor()
+def make_data(data_path):
+    train_transforms = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        torchvision.transforms.RandomCrop(80),
+        torchvision.transforms.RandomHorizontalFlip(p=0.5)
     ])
-    _train_data = torchvision.datasets.STL10('data/stl10', split='train', download=True,
-                transform = transforms)
-    _test_data = torchvision.datasets.STL10('data/stl10', split='test', download=True,
-                transform = transforms)
+    test_transforms = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ])
+    _train_data = torchvision.datasets.STL10(data_path, split='train', download=True,
+                transform = train_transforms)
+    _test_data = torchvision.datasets.STL10(data_path, split='test', download=True,
+                transform = test_transforms)
     train_data_loader = torch.utils.data.DataLoader(_train_data,
                                               batch_size=8,
                                               shuffle=True,
@@ -27,6 +35,8 @@ def train(net, opt, lossf, data):
     good, total = 0, 0
     net.train()
     for X, y in data:
+        #torchvision.transforms.functional.to_pil_image(X[0]).show()
+        #input()
         X, y = X.cuda(), y.cuda()
         opt.zero_grad()
         out = net(X)
@@ -38,7 +48,6 @@ def train(net, opt, lossf, data):
         total += len(y)
     print('Train Loss:', torch.tensor(losses).float().mean())
     print('Train Accuracy:', good/total*100)
-    torch.save(net.state_dict(), 'models/plain_resnet18.pth')
 
 def test(net, lossf, data):
     losses = []
@@ -55,17 +64,23 @@ def test(net, lossf, data):
     print('Test Loss:', torch.tensor(losses).float().mean())
     print('Test Accuracy:', good/total*100)
 
-def main():
-    EPOCHS = 30
+def main(save_path, data_path):
+    EPOCHS = 300
     net = PlainResNet18().cuda()
     opt = torch.optim.Adam(net.parameters(), weight_decay=0.001)
     lossf = torch.nn.CrossEntropyLoss()
-    train_data, test_data = make_data()
+    train_data, test_data = make_data(data_path)
     for epoch in range(EPOCHS):
         print('Epoch:', epoch)
         train(net, opt, lossf, train_data)
         test(net, lossf, test_data)
+        torch.save(net.state_dict(), save_path)
 
 if __name__ == '__main__':
-    main()
+    save_path = 'models/plain_resnet18.pth'
+    data_path = 'data/stl10'
+    if len(sys.argv) > 1 and sys.argv[1] == 'g':
+        save_path = '/content/drive/MyDrive/mgr/models/plain_resnet18.pth'
+        data_path = '/content/drive/MyDrive/mgr/stl10'
+    main(save_path, data_path)
 

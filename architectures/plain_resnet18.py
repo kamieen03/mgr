@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torchsummary import summary
 
 def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
@@ -52,7 +53,7 @@ class PlainResNet18(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        self.dropout_50 = torch.nn.Dropout2d(p=0.25)
+        self.dropout = torch.nn.Dropout2d(p=0.25)
         self.layer1 = self._make_layer(64, layers[0])
         self.layer2 = self._make_layer(128, layers[1], stride=2)
         self.layer3 = self._make_layer(256, layers[2], stride=2)
@@ -89,13 +90,12 @@ class PlainResNet18(nn.Module):
         x = self.maxpool(x)
 
         x = self.layer1(x)
-        x = self.dropout_50(x)
         x = self.layer2(x)
-        x = self.dropout_50(x)
+        x = self.dropout(x)
         x = self.layer3(x)
-        x = self.dropout_50(x)
+        x = self.dropout(x)
         x = self.layer4(x)
-        x = self.dropout_50(x)
+        x = self.dropout(x)
 
         x = self.avgpool(x)
         x = torch.flatten(x, 1)
@@ -103,3 +103,8 @@ class PlainResNet18(nn.Module):
 
         return x
 
+
+if __name__ == '__main__':
+    net = PlainResNet18().cuda()
+    inp = (3,80,80)
+    print(summary(net, inp))
