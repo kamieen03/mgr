@@ -9,7 +9,8 @@ def make_data(data_path):
     train_transforms = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        torchvision.transforms.RandomCrop(80),
+        torchvision.transforms.Pad(2),
+        torchvision.transforms.RandomCrop(96),
         torchvision.transforms.RandomHorizontalFlip(p=0.5)
     ])
     test_transforms = torchvision.transforms.Compose([
@@ -21,13 +22,13 @@ def make_data(data_path):
     _test_data = torchvision.datasets.STL10(data_path, split='test', download=True,
                 transform = test_transforms)
     train_data_loader = torch.utils.data.DataLoader(_train_data,
-                                              batch_size=8,
+                                              batch_size=128,
                                               shuffle=True,
-                                              num_workers=2)
+                                              num_workers=4)
     test_data_loader = torch.utils.data.DataLoader(_test_data,
-                                              batch_size=8,
+                                              batch_size=128,
                                               shuffle=True,
-                                              num_workers=2)
+                                              num_workers=4)
     return train_data_loader, test_data_loader
 
 def train(net, opt, lossf, data):
@@ -65,9 +66,9 @@ def test(net, lossf, data):
     print('Test Accuracy:', good/total*100)
 
 def main(save_path, data_path):
-    EPOCHS = 300
+    EPOCHS = 200
     net = PlainResNet18().cuda()
-    opt = torch.optim.Adam(net.parameters(), weight_decay=0.001)
+    opt = torch.optim.SGD(net.parameters(), lr=0.1, momentum=0.9, weight_decay=0.002)
     lossf = torch.nn.CrossEntropyLoss()
     train_data, test_data = make_data(data_path)
     for epoch in range(EPOCHS):
@@ -75,6 +76,10 @@ def main(save_path, data_path):
         train(net, opt, lossf, train_data)
         test(net, lossf, test_data)
         torch.save(net.state_dict(), save_path)
+        if epoch == 100:
+            opt.lr = 0.01
+        elif epoch == 150:
+            opt.lr = 0.001
 
 if __name__ == '__main__':
     save_path = 'models/plain_resnet18.pth'
