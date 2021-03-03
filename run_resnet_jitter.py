@@ -8,6 +8,7 @@ import sys
 def make_data(data_path):
     train_transforms = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
+        torchvision.transforms.ColorJitter(brightness=(0.1,10.0), contrast=(0.0,10.0)),
         torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         torchvision.transforms.Pad(2),
         torchvision.transforms.RandomCrop(88),
@@ -78,10 +79,10 @@ def main(save_path, data_path):
         torch.save(net.state_dict(), save_path)
 
 if __name__ == '__main__':
-    save_path = 'models/plain_resnet18.pth'
+    save_path = 'models/plain_resnet18_jitter.pth'
     data_path = 'data/stl10'
     if len(sys.argv) > 1 and sys.argv[1] == 'g':
-        save_path = '/content/drive/MyDrive/mgr/models/plain_resnet18.pth'
+        save_path = '/content/drive/MyDrive/mgr/models/plain_resnet18_jitter.pth'
         data_path = '/content/drive/MyDrive/mgr/stl10'
     main(save_path, data_path)
 
