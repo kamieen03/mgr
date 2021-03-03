@@ -4,19 +4,30 @@ import torchvision
 import torch
 from architectures import PlainResNet18
 import sys
+from torchvision.transforms import Compose, RandomChoice, RandomOrder, ColorJitter, ToTensor, Normalize, Pad
+from torchvision.transforms import RandomCrop, RandomHorizontalFlip
 
 def make_data(data_path):
-    train_transforms = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.ColorJitter(brightness=(0.1,10.0), contrast=(0.0,10.0)),
-        torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        torchvision.transforms.Pad(2),
-        torchvision.transforms.RandomCrop(88),
-        torchvision.transforms.RandomHorizontalFlip(p=0.5)
+    train_transforms = Compose([
+        RandomOrder([
+            RandomChoice([
+                ColorJitter(brightness=(0.1,1.0)),
+                ColorJitter(brightness=(1.0, 10.0))
+            ]),
+            RandomChoice([
+                ColorJitter(contrast=(0.0, 1.0)),
+                ColorJitter(contrast=(1.0, 10.0))
+            ])
+        ]),
+        ToTensor(),
+        Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        Pad(2),
+        RandomCrop(88),
+        RandomHorizontalFlip(p=0.5)
     ])
-    test_transforms = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    test_transforms = Compose([
+        ToTensor(),
+        Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
     _train_data = torchvision.datasets.STL10(data_path, split='train', download=True,
                 transform = train_transforms)

@@ -56,7 +56,7 @@ def main(model_path, data_path, out_path):
     with open(out_path, 'w') as f:
         f.write('contrast brightness train_set_acc test_set_acc')
         for k, v in results.items():
-            f.write(f'{key[0]} {key[1]} {value[0]} {value[1]}')
+            f.write(f'{k[0]} {k[1]} {v[0]} {v[1]}\n')
 
 
 if __name__ == '__main__':
