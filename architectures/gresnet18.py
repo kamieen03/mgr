@@ -92,12 +92,12 @@ class GResNet18(nn.Module):
         self.pool = nn.AvgPool3d(kernel_size=(1,3,3), stride=(1,2,2), padding=(0,1,1))
 
         self.dropout = torch.nn.Dropout3d(p=0.25)
-        self.layer1 = self._make_layer(16, layers[0])
-        self.layer2 = self._make_layer(32, layers[1], stride=2)
-        self.layer3 = self._make_layer(64, layers[2], stride=2)
-        self.layer4 = self._make_layer(128, layers[3], stride=2)
+        self.layer1 = self._make_layer(64, layers[0])
+        self.layer2 = self._make_layer(128, layers[1], stride=2)
+        self.layer3 = self._make_layer(256, layers[2], stride=2)
+        self.layer4 = self._make_layer(512, layers[3], stride=2)
         self.final_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(128 * len(self.contrasts), num_classes)
+        self.fc = nn.Linear(512 * len(self.contrasts), num_classes)
 
         #for m in self.modules():
         #    if isinstance(m, LiftedConv):
@@ -130,11 +130,11 @@ class GResNet18(nn.Module):
 
         x = self.layer1(x)
         x = self.layer2(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
         x = self.layer3(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
         x = self.layer4(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
 
         x = self.final_avg_pool(x)
         x = torch.flatten(x, 1)
