@@ -34,7 +34,7 @@ class LiftedConv(nn.Module):
     def __init__(self, cin, cout, cs, size, stride=1, padding=0, bias=None):
         super(LiftedConv, self).__init__()
         self.kernel = nn.Parameter(torch.randn((cout, cin, len(cs), size, size)),
-                requires_grad=True).cuda() #TODO: Kamming init
+                requires_grad=True) #TODO: Kamming init
         self.cs = cs
         self.stride = stride
         self.padding = padding
