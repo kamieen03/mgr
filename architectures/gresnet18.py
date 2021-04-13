@@ -17,6 +17,19 @@ class Lift(nn.Module):
         l = [change_contrast(X, c, (-3,-2,-1)) for c in self.cs]
         return torch.stack(l, dim=2)
 
+class LiftedBatchNorm2d(nn.Module):
+    def __init__(self, cin, cs):
+        super(LiftedBatchNorm2d, self).__init__()
+        self.norm = nn.BatchNorm2d(cin * len(cs))
+
+    def forward(self, X):   # X is [B,C,D,H,W]
+        b,c,d,h,w = X.shape
+        X = X.view(b,c*d,h,w)
+        X = self.norm(X)
+        X = X.view(b,c,d,h,w)
+        return X
+
+
 class LiftedConv(nn.Module):
     def __init__(self, cin, cout, cs, size, stride=1, padding=0, bias=None):
         super(LiftedConv, self).__init__()
@@ -46,14 +59,15 @@ def conv1x1(cin, cout, cs, stride=1):
     return LiftedConv(cin, cout, cs, size=1, stride=stride, padding=0, bias=None)
 
 class BasicBlock(nn.Module):
-    def __init__(self, inplanes, planes, cs, stride=1, downsample=None, normalization=nn.BatchNorm3d):
+    def __init__(self, inplanes, planes, cs, stride=1, downsample=None,
+         normalization=LiftedBatchNorm2d):
         super(BasicBlock, self).__init__()
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, cs, stride)
-        self.bn1 = normalization(planes)
+        self.bn1 = normalization(planes, cs)
         self.activation = nn.Softsign()
         self.conv2 = conv3x3(planes, planes, cs)
-        self.bn2 = normalization(planes)
+        self.bn2 = normalization(planes, cs)
         self.downsample = downsample
         self.stride = stride
 
@@ -79,7 +93,7 @@ class BasicBlock(nn.Module):
 class GResNet18(nn.Module):
     def __init__(self, layers=[2,2,2,2], num_classes=10):
         super(GResNet18, self).__init__()
-        self.inplanes = 16
+        self.inplanes = 64
         self.dilation = 1
         self.groups = 1
         self.base_width = 64
@@ -87,7 +101,7 @@ class GResNet18(nn.Module):
         
         self.lift = Lift(self.contrasts)
         self.conv1 = LiftedConv(3, self.inplanes, self.contrasts, 7, stride=2, padding=3, bias=None)
-        self.bn1 = nn.BatchNorm3d(self.inplanes)
+        self.bn1 = LiftedBatchNorm2d(self.inplanes, self.contrasts)
         self.activation = nn.Softsign()
         self.pool = nn.AvgPool3d(kernel_size=(1,3,3), stride=(1,2,2), padding=(0,1,1))
 
@@ -111,7 +125,7 @@ class GResNet18(nn.Module):
         if stride != 1:
             downsample = nn.Sequential(
                 conv1x1(self.inplanes, planes, self.contrasts, stride),
-                nn.BatchNorm3d(planes),
+                LiftedBatchNorm2d(planes, self.contrasts),
             )
 
         layers = []
@@ -159,3 +173,4 @@ if __name__ == '__main__':
 # TODO: jeśli trening bd zbyt wolny, dodać kolejne bloki albo poszerzyć sieć
 # TODO: rozważyć dodanie pośredniej warstwy liniowej pod koniec, np. agregującej wszystkie kontrasty
 #   na danym kanale w jeden kanał
+
