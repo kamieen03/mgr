@@ -14,7 +14,7 @@ class Lift(nn.Module):
         self.cs = cs
 
     def forward(self, X):   # X is [B,C,H,W]
-        l = [change_contrast(X, c, (-3,-2,-1)) for c in self.cs]
+        l = [change_contrast(X, c, (-3,-2,-1)) for c in self.cs] ##########[::-1]?
         return torch.stack(l, dim=2)
 
 class LiftedBatchNorm2d(nn.Module):
@@ -24,9 +24,9 @@ class LiftedBatchNorm2d(nn.Module):
 
     def forward(self, X):   # X is [B,C,D,H,W]
         b,c,d,h,w = X.shape
-        X = X.view(b,c*d,h,w)
+        X = X.reshape(b,c*d,h,w)
         X = self.norm(X)
-        X = X.view(b,c,d,h,w)
+        X = X.reshape(b,c,d,h,w)
         return X
 
 
@@ -49,7 +49,9 @@ class LiftedConv(nn.Module):
         fX = X.view(ib, icin*id, ih, iw)
         out = F.conv2d(fX, k_stack, stride=self.stride, padding=self.padding, bias=self.bias)
         _, _, oh, ow = out.shape
-        out = out.view(ib, cout, id, oh, ow)
+        out = out.view(ib, id, cout, oh, ow)
+        out = out.transpose(1,2)
+        #out = out.view(ib, cout, id, oh, ow)
         return out
 
 def conv3x3(cin, cout, cs, stride=1):
