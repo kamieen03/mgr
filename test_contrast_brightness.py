@@ -3,7 +3,9 @@
 import torchvision
 import torch
 from architectures import PlainResNet18
+from architectures import GResNet18
 import sys
+import numpy as np
 
 def make_data(data_path, c, b):
     transforms = torchvision.transforms.Compose([
@@ -21,11 +23,11 @@ def make_data(data_path, c, b):
     train_data_loader = torch.utils.data.DataLoader(_train_data,
                                               batch_size=64,
                                               shuffle=True,
-                                              num_workers=4)
+                                              num_workers=2)
     test_data_loader = torch.utils.data.DataLoader(_test_data,
                                               batch_size=64,
                                               shuffle=True,
-                                              num_workers=4)
+                                              num_workers=2)
     return train_data_loader, test_data_loader
 
 def test(net, data):
@@ -41,28 +43,28 @@ def test(net, data):
 
 def main(model_path, data_path, out_path):
     results = {}
-    net = PlainResNet18().cuda()
+    net = GResNet18().cuda()
     net.load_state_dict(torch.load(model_path))
     net.eval()
     i = 1
-    for c in [0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]:       # 0 is grey image, 1 is original 
-        for b in [0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0]: # 0 is black image, 1 is original
+    for c in 10**np.linspace(-1,1,15):      # 0 is grey image, 1 is original 
+        for b in 10**np.linspace(-1,1,15): # 0 is black image, 1 is original
             train_set, test_set = make_data(data_path, c, b)
             results[(c,b)] = []
             results[(c,b)].append(test(net, train_set))
             results[(c,b)].append(test(net, test_set))
-            print(f'[{i}/49]')
+            print(f'[{i}/225]')
             i += 1
     with open(out_path, 'w') as f:
-        f.write('contrast brightness train_set_acc test_set_acc')
+        f.write('contrast brightness train_set_acc test_set_acc\n')
         for k, v in results.items():
             f.write(f'{k[0]} {k[1]} {v[0]} {v[1]}\n')
 
 
 if __name__ == '__main__':
-    model_path = 'models/plain_resnet18.pth'
+    model_path = 'models/gresnet18.pth'
     data_path = 'data/stl10'
-    out_path = 'results/plain_resnet18_tests.txt'
+    out_path = 'results/gresnet18_tests.txt'
     if len(sys.argv) > 1 and sys.argv[1] == 'g':
         base_path = '/content/drive/MyDrive/mgr/'
         model_path = base_path + model_path
