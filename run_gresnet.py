@@ -9,14 +9,12 @@ from tqdm import tqdm
 def make_data(data_path):
     train_transforms = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         torchvision.transforms.Pad(2),
         torchvision.transforms.RandomCrop(88),
         torchvision.transforms.RandomHorizontalFlip(p=0.5)
     ])
     test_transforms = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
     ])
     _train_data = torchvision.datasets.STL10(data_path, split='train', download=True,
                 transform = train_transforms)

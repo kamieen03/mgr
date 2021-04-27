@@ -4,7 +4,13 @@ from torchsummary import summary
 import numpy as np
 import torch.nn.functional as F
 
-def change_contrast(X, factor, dim):    # X is either [B,C,D,H,W] or [B,C,H,W]
+def change_contrast(X, factor):    # X is either [B,C,D,H,W] or [B,C,H,W]
+    if len(X.shape) == 4:
+        dim = (-3,-2,-1)
+    elif len(X.shape) == 5:
+        dim = (-4,-2,-1)
+    else:
+        raise Exception('Wrong dimensionality of input tensor')
     mean = torch.mean(X, dim=dim, keepdim=True)
     return X*factor + (1-factor)*mean
 
@@ -14,13 +20,13 @@ class Lift(nn.Module):
         self.cs = cs
 
     def forward(self, X):   # X is [B,C,H,W]
-        l = [change_contrast(X, c, (-3,-2,-1)) for c in self.cs] ##########[::-1]?
+        l = [change_contrast(X, c) for c in self.cs]
         return torch.stack(l, dim=2)
 
 class LiftedBatchNorm2d(nn.Module):
     def __init__(self, cin, cs):
         super(LiftedBatchNorm2d, self).__init__()
-        self.norm = nn.BatchNorm2d(cin * len(cs))
+        self.norm = nn.BatchNorm2d(cin * len(cs), affine=False)
 
     def forward(self, X):   # X is [B,C,D,H,W]
         b,c,d,h,w = X.shape
@@ -33,26 +39,28 @@ class LiftedBatchNorm2d(nn.Module):
 class LiftedConv(nn.Module):
     def __init__(self, cin, cout, cs, size, stride=1, padding=0, bias=None):
         super(LiftedConv, self).__init__()
-        self.kernel = nn.Parameter(torch.randn((cout, cin, len(cs), size, size)),
-                requires_grad=True) #TODO: Kamming init
+        self.kernel = nn.Parameter(torch.randn((cout, cin, size, size)), requires_grad=True)
+        self.lift = Lift(cs[::-1])
         self.cs = cs
         self.stride = stride
-        self.padding = padding
+        self.padding = [padding]*4
         self.bias = bias
 
     def forward(self, X):   # X is tensor of shape [B,C,D,H,W]
         cout = self.kernel.shape[0]
-        k_stack = torch.cat([change_contrast(self.kernel, c, (-4,-2,-1)) for c in self.cs], dim=0)
+        lifted_kernel = self.lift(self.kernel)
+        k_stack = torch.cat([change_contrast(lifted_kernel, c) for c in self.cs], dim=0)
         kcout, kcin, kd, kh, kw = k_stack.shape
         k_stack = k_stack.view(kcout, kcin*kd, kh, kw)
         ib, icin, id, ih, iw = X.shape
         fX = X.view(ib, icin*id, ih, iw)
-        out = F.conv2d(fX, k_stack, stride=self.stride, padding=self.padding, bias=self.bias)
+        fX = F.pad(fX, self.padding, mode='constant', value=fX.mean())
+        out = F.conv2d(fX, k_stack, stride=self.stride, padding=0, bias=self.bias)
         _, _, oh, ow = out.shape
         out = out.view(ib, id, cout, oh, ow)
         out = out.transpose(1,2)
         #out = out.view(ib, cout, id, oh, ow)
-        return out
+        return out / len(self.cs)
 
 def conv3x3(cin, cout, cs, stride=1):
     return LiftedConv(cin, cout, cs, size=3, stride=stride, padding=1, bias=None)
@@ -61,13 +69,12 @@ def conv1x1(cin, cout, cs, stride=1):
     return LiftedConv(cin, cout, cs, size=1, stride=stride, padding=0, bias=None)
 
 class BasicBlock(nn.Module):
-    def __init__(self, inplanes, planes, cs, stride=1, downsample=None,
-         normalization=LiftedBatchNorm2d):
+    def __init__(self, inplanes, planes, cs, activation, stride=1, downsample=None, normalization=LiftedBatchNorm2d):
         super(BasicBlock, self).__init__()
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, cs, stride)
         self.bn1 = normalization(planes, cs)
-        self.activation = nn.Softsign()
+        self.activation = activation
         self.conv2 = conv3x3(planes, planes, cs)
         self.bn2 = normalization(planes, cs)
         self.downsample = downsample
@@ -105,7 +112,7 @@ class GResNet18(nn.Module):
         self.conv1 = LiftedConv(3, self.inplanes, self.contrasts, 7, stride=2, padding=3, bias=None)
         self.bn1 = LiftedBatchNorm2d(self.inplanes, self.contrasts)
         self.activation = nn.Softsign()
-        self.pool = nn.AvgPool3d(kernel_size=(1,3,3), stride=(1,2,2), padding=(0,1,1))
+        self.pool = nn.AvgPool3d(kernel_size=(1,3,3), stride=(1,2,2), padding=(0,1,1), count_include_pad=False)
 
         self.dropout = torch.nn.Dropout3d(p=0.25)
         self.layer1 = self._make_layer(64, layers[0])
@@ -131,30 +138,32 @@ class GResNet18(nn.Module):
             )
 
         layers = []
-        layers.append(BasicBlock(self.inplanes, planes, self.contrasts, stride, downsample))
+        layers.append(BasicBlock(self.inplanes, planes, self.contrasts, self.activation, stride, downsample))
         self.inplanes = planes
         for _ in range(1, blocks):
-            layers.append(BasicBlock(self.inplanes, planes, self.contrasts))
+            layers.append(BasicBlock(self.inplanes, planes, self.contrasts, self.activation))
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.lift(x)
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.activation(x)
-        x = self.pool(x)
+        y = x - torch.mean(x, dim=(-3,-2,-1), keepdim=True)
+        y *= 4.5
+        y = self.lift(x)
+        y = self.conv1(y)
+        y = self.bn1(y)
+        y = self.activation(y)
+        y = self.pool(y)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        #x = self.dropout(x)
-        x = self.layer3(x)
-        #x = self.dropout(x)
-        x = self.layer4(x)
-        #x = self.dropout(x)
+        y = self.layer1(y)
+        y = self.layer2(y)
+        y = self.dropout(y)
+        y = self.layer3(y)
+        y = self.dropout(y)
+        y = self.layer4(y)
+        #y = self.dropout(y)
 
-        x = self.final_avg_pool(x)
-        x = torch.flatten(x, 1)
-        x = self.fc(x)
+        y = self.final_avg_pool(y)
+        y = torch.flatten(y, 1)
+        y = self.fc(y)
 
         return x
 
