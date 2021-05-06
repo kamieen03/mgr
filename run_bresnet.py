@@ -39,6 +39,7 @@ def train(net, opt, lossf, data):
         X, y = X.cuda(), y.cuda()
         opt.zero_grad()
         out = net(X)
+        print(out.shape, y.shape)
         loss = lossf(out, y)
         losses.append(loss.item())
         loss.backward()
@@ -79,7 +80,7 @@ if __name__ == '__main__':
     save_path = 'models/plain_bresnet18.pth'
     data_path = 'data/stl10'
     if len(sys.argv) > 1 and sys.argv[1] == 'g':
-        save_path = '/content/drive/MyDrive/mgr/models/plain_bresnet18.pth'
+        save_path = '/content/drive/MyDrive/mgr/models/bresnet18.pth'
         data_path = '/content/drive/MyDrive/mgr/stl10'
     main(save_path, data_path)
 

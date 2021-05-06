@@ -47,7 +47,7 @@ class BResNet18(nn.Module):
         self.groups = 1
         self.base_width = 64
 
-        self.bn0 = nn.BatchNorm2d(3, affine=False, track_running_stats=False, eps=0)
+        self.bn0 = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(self.inplanes)#, affine=False, track_running_stats=False)
         self.relu = nn.ReLU(inplace=True)

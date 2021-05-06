@@ -84,23 +84,22 @@ class PlainResNet18(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
+        y = self.conv1(x)
+        y = self.bn1(y)
+        y = self.relu(y)
+        y = self.maxpool(y)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.dropout(x)
-        x = self.layer3(x)
-        x = self.dropout(x)
-        x = self.layer4(x)
-        x = self.dropout(x)
+        y = self.layer1(y)
+        y = self.layer2(y)
+        y = self.dropout(y)
+        y = self.layer3(y)
+        y = self.dropout(y)
+        y = self.layer4(y)
+        y = self.dropout(y)
 
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.fc(x)
-
+        y = self.avgpool(y)
+        y = torch.flatten(y, 1)
+        y = self.fc(y)
         return x
 
 
