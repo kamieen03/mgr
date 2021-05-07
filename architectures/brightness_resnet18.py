@@ -8,15 +8,22 @@ def conv3x3(in_planes, out_planes, stride=1):
 def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
+class MeanNorm2d(nn.Module):
+    def __init__(self, cin):
+        super(MeanNorm2d, self).__init__()
+
+    def forward(self, X):   # X is [B,C,D,H,W]
+        return X - torch.mean(X, dim=(-3,-2,-1), keepdim=True)
+
 class BasicBlock(nn.Module):
-    def __init__(self, inplanes, planes, stride=1, downsample=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, norm_block=torch.nn.BatchNorm2d):
         super(BasicBlock, self).__init__()
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
-        self.bn1 = nn.BatchNorm2d(planes)#, affine=False, track_running_stats=False)
+        self.bn1 = norm_block(planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
-        self.bn2 = nn.BatchNorm2d(planes)#, affine=False, track_running_stats=False)
+        self.bn2 = norm_block(planes)
         self.downsample = downsample
         self.stride = stride
 
@@ -40,16 +47,22 @@ class BasicBlock(nn.Module):
 
 
 class BResNet18(nn.Module):
-    def __init__(self, layers=[2,2,2,2], num_classes=10):
+    def __init__(self, equivariant=True, layers=[2,2,2,2], num_classes=10):
         super(BResNet18, self).__init__()
         self.inplanes = 64
         self.dilation = 1
         self.groups = 1
         self.base_width = 64
 
-        self.bn0 = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
+        if equivariant:
+            self.bn0 = nn.Identity()
+            self.norm_block = MeanNorm2d
+        if not equivariant:     # invariant
+            self.bn0 = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
+            self.norm_block = torch.nn.BatchNorm2d
+
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = nn.BatchNorm2d(self.inplanes)#, affine=False, track_running_stats=False)
+        self.bn1 = self.norm_block(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -70,11 +83,11 @@ class BResNet18(nn.Module):
         if stride != 1:
             downsample = nn.Sequential(
                 conv1x1(self.inplanes, planes, stride),
-                nn.BatchNorm2d(planes)#, affine=False, track_running_stats=False),
+                self.norm_block(planes)
             )
 
         layers = []
-        layers.append(BasicBlock(self.inplanes, planes, stride, downsample))
+        layers.append(BasicBlock(self.inplanes, planes, stride, downsample, self.norm_block))
         self.inplanes = planes
         for _ in range(1, blocks):
             layers.append(BasicBlock(self.inplanes, planes))
