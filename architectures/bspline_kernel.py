@@ -1,131 +1,52 @@
 import torch
 import torch.nn as nn
-from matplotlib import pyplot as plt
 import numpy as np
 import torch.nn.functional as F
 
-
-
-W = torch.tensor([[[-0.06518216,  0.3436535 ,  0.02793598,  0.08924604],
-        [-0.39574003,  0.06900278,  0.04726501, -0.08235252],
-        [-0.15687987, -0.10632388,  0.01870326, -0.01690928],
-        [-0.21243805, -0.08228257,  0.0032882 , -0.01525558],
-        [-0.0205287 , -0.00705499, -0.07551406,  0.08916866],
-        [-0.06416772,  0.4117483 , -0.2377878 ,  0.1475901 ],
-        [-0.04280502,  0.10190415, -0.04118161,  0.1236734 ],
-        [-0.14474988,  0.2160672 , -0.1956757 ,  0.12421851],
-        [ 0.13771164,  0.04097075,  0.03864748, -0.30966392],
-        [-0.2332098 , -0.08676185,  0.04168695, -0.15349096],
-        [-0.24856828, -0.00134292, -0.16269036,  0.36514813],
-        [-0.19651347, -0.12748499,  0.01099507, -0.01542055],
-        [-0.12977828, -0.17146485,  0.3100929 , -0.00229157],
-        [-0.05568685,  0.06800753, -0.13971618, -0.29102886],
-        [-0.13664629, -0.06856158,  0.18293062,  0.02576867],
-        [-0.15869801, -0.1951288 , -0.1198565 ,  0.43554378],
-        [ 0.050873  , -0.28243944,  0.11937547,  0.08849427],
-        [ 0.18724726, -0.13705201,  0.03489593, -0.08998587],
-        [-0.07771235,  0.0165573 , -0.10067812, -0.12401741],
-        [-0.14858125, -0.01746263, -0.07250581, -0.04955208],
-        [-0.32406828,  0.262323  ,  0.19604814,  0.08150239],
-        [ 0.07567269, -0.00781297, -0.09012861, -0.08103321],
-        [-0.15715095, -0.07990007,  0.02051933, -0.17617838],
-        [ 0.03319242,  0.03406872,  0.21982133,  0.0696398 ],
-        [ 0.12404784, -0.14960775,  0.28858024,  0.07236279]],
-
-       [[-0.18991551, -0.34154922,  0.08499108,  0.08413915],
-        [-0.02880256,  0.31065616,  0.03331621, -0.07368334],
-        [-0.18024367, -0.0702909 ,  0.02809645, -0.16784768],
-        [-0.03352853,  0.03497047,  0.05427112,  0.09368677],
-        [-0.25657478, -0.06746056, -0.05218885,  0.27762368],
-        [ 0.23968694,  0.02504016, -0.13339949,  0.34917408],
-        [-0.19357906,  0.18600781,  0.11434741, -0.1767508 ],
-        [-0.24959797, -0.05103474, -0.1498358 , -0.47567624],
-        [ 0.15961562,  0.25073358,  0.2895516 , -0.14761873],
-        [-0.05149938,  0.00515799,  0.08421849, -0.10615352],
-        [ 0.00337075, -0.19133435,  0.11245591, -0.30772215],
-        [ 0.11588302, -0.24641132, -0.2275569 , -0.10484957],
-        [ 0.15687312,  0.00302764,  0.08150239, -0.15437111],
-        [ 0.09312208,  0.3226283 ,  0.36872616, -0.183339  ],
-        [ 0.05018407, -0.10402174, -0.00391628,  0.30485097],
-        [ 0.14025849, -0.12213394, -0.15313938,  0.03376525],
-        [ 0.11247385, -0.05399817,  0.10209464,  0.05039587],
-        [ 0.12840216,  0.25530598, -0.02566447,  0.45997307],
-        [ 0.10722978,  0.01897335, -0.12572128, -0.3567479 ],
-        [-0.03569375,  0.2009255 , -0.03875164, -0.05449633],
-        [-0.01164436, -0.24437661, -0.278893  ,  0.02108891],
-        [ 0.22685267,  0.22243233,  0.0110101 ,  0.10011432],
-        [-0.1369755 , -0.02077853, -0.06833495,  0.12972985],
-        [ 0.03546307, -0.02300689,  0.07308006,  0.00652643],
-        [ 0.08007378, -0.24722044, -0.01580964,  0.2748542 ]],
-
-       [[ 0.20111899,  0.02788235,  0.01857617,  0.07879796],
-        [-0.2020716 , -0.09510314,  0.19686656, -0.08779918],
-        [ 0.10031196, -0.04606157, -0.14887415,  0.1400707 ],
-        [-0.01911328, -0.02257261, -0.1290457 , -0.05003252],
-        [ 0.01630285,  0.08305968,  0.07751977,  0.0027204 ],
-        [-0.11477474, -0.03618487, -0.01364204, -0.16507892],
-        [-0.0221171 ,  0.29843938, -0.22689983, -0.08528376],
-        [ 0.07593921,  0.13356954,  0.00193756, -0.06325074],
-        [ 0.10335637,  0.0770603 ,  0.11922584, -0.20808835],
-        [ 0.02758033, -0.08481099, -0.3065297 , -0.17472453],
-        [-0.00892987,  0.02831938, -0.11068449,  0.00175266],
-        [-0.12209512, -0.04682862,  0.11527448, -0.09239871],
-        [-0.2684097 , -0.4145323 , -0.03869605, -0.19058682],
-        [ 0.02955331, -0.02884843,  0.03651601, -0.19781303],
-        [ 0.2041975 , -0.06982908,  0.14806077, -0.1116985 ],
-        [-0.23719795,  0.27649215, -0.08877492, -0.08851544],
-        [-0.10855176, -0.10991224, -0.1651174 , -0.34662008],
-        [-0.09263839,  0.08596458,  0.3335519 ,  0.23205855],
-        [-0.0051435 , -0.04867378,  0.10497877, -0.2710456 ],
-        [-0.08166961, -0.16814601,  0.09262553, -0.18670377],
-        [ 0.09212241, -0.02258242, -0.03202123,  0.03847115],
-        [ 0.19090515,  0.14939564, -0.19228917, -0.12325653],
-        [-0.01181093, -0.05385977, -0.22412266,  0.02976733],
-        [ 0.38666505,  0.05607326,  0.48455176, -0.29146954],
-        [-0.25131974,  0.21475358, -0.14364435, -0.33746272]]])
-
 def B2(x):
-    return (-3*(-1/2 + x)**2 * np.sign(1/2 - x) +
-           (-3/2 + x)**2 * np.sign(3/2 - x) -
-           (3*(1 + 2*x)**2 * np.sign(1/2 + x))/4 +
-           ((3 + 2*x)**2 * np.sign(3/2 + x))/4)/4
+    return (-3*(-1/2 + x)**2 * torch.sign(1/2 - x) +
+           (-3/2 + x)**2 * torch.sign(3/2 - x) -
+           (3*(1 + 2*x)**2 * torch.sign(1/2 + x))/4 +
+           ((3 + 2*x)**2 * torch.sign(3/2 + x))/4)/4
+
+def rotate_xx_coordinates(grid, theta):
+    x = grid[...,0]
+    y = grid[...,1]
+    x_new = x*np.cos(theta) - y*np.sin(theta)
+    y_new = x*np.sin(theta) + y*np.cos(theta)
+    return np.stack([x_new,y_new], axis=-1)
 
 class Lift(nn.Module):
-    def __init__(self, C_in, C_out, kernel_size, N_rot, stride=1, mask=False):
+    def __init__(self, C_out, kernel_size, N_rot, stride=1, mask=False):
         super(Lift, self).__init__()
         self.kernel_size = kernel_size
+        self.stride = stride
+        self.C_out = C_out
+
         l, h = -(kernel_size//2), kernel_size//2
         self.sample_grid = np.array([[[i,j] for j in range(l,h+1)] for i in
             range(l,h+1)])
         self.centers = self.sample_grid.copy().reshape(25,2)
         self.centers = np.stack([self.centers]*3)
         self.centers = self.centers.transpose(2,0,1)
+        self.centers = torch.from_numpy(self.centers).cuda()
         self.rotations = np.linspace(0, 2*np.pi, N_rot, endpoint=False)
-        self.stride = stride
-        self.C_out = C_out
 
-        self.weights = torch.randn(C_in, kernel_size**2, C_out)
-        self.weights = W
-
-    def rotate_coordinates(self, grid, theta):
-        x = grid[...,0]
-        y = grid[...,1]
-        x_new = x*np.cos(theta) - y*np.sin(theta)
-        y_new = x*np.sin(theta) + y*np.cos(theta)
-        return np.stack([x_new,y_new], axis=-1)
+        self.weights = nn.Parameter(torch.randn(3, kernel_size**2, C_out),
+                requires_grad=True)
 
     def kernel(self, theta):
         '''
         Return (C_out, C_in, kernel_size, kernel_size)-shaped tensor.
-        It's values are sampled at positions corrseponding to SAMPLING_GRID
+        It's values are sampled at positions corresponding to sample_grid
         rotated by angle theta.
         '''
-        xxs = self.rotate_coordinates(self.sample_grid, theta)
-        _xxs = xxs.reshape(self.kernel_size, self.kernel_size, 2, 1, 1)
-        diffs = self.centers - _xxs
-        vals = torch.from_numpy(np.prod(B2(diffs), axis = -3))
+        xxs = rotate_xx_coordinates(self.sample_grid, theta)
+        xxs = xxs.reshape(self.kernel_size, self.kernel_size, 2, 1, 1)
+        xxs = torch.from_numpy(xxs).cuda()
+        diffs = self.centers - xxs
+        vals = torch.prod(B2(diffs), dim=-3)
         vals = vals.unsqueeze(-1)
-
         _weights = self.weights.unsqueeze(0).unsqueeze(0)
         return torch.sum(vals * _weights, axis=-2).permute(3,2,0,1).float()
 
@@ -139,9 +60,88 @@ class Lift(nn.Module):
         return out
 
 
+class LiftedConv(nn.Module):
+    def __init__(self, C_in, C_out, kernel_size, N_rot, rot_basis_size,
+            stride=1, padding=0, mask=False):
+        super(LiftedConv, self).__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.C_out = C_out
 
-l = Lift(C_in=3, C_out=4, kernel_size=5, N_rot=10)
-a=l(torch.ones(1,3,10,10))
-print(a.shape)
-print(torch.sum(a,axis=(0,1,3,4)))
-print(torch.sum(a,axis=(0,2,3,4)))
+        self.rot_scale = 2*np.pi/rot_basis_size
+
+        l, h = -(kernel_size//2), kernel_size//2
+        self.xx_sample_grid = np.array([[[i,j] for j in range(l,h+1)] for i in
+            range(l,h+1)], dtype=np.float32)
+        self.xx_centers = self.xx_sample_grid.copy().reshape(25,2)
+        self.xx_centers = np.stack([self.xx_centers]*C_in)
+        self.xx_centers = np.repeat(self.xx_centers, rot_basis_size, axis=1)
+        self.xx_centers = self.xx_centers.transpose(2,0,1)
+        self.xx_centers = torch.from_numpy(self.xx_centers).cuda()
+
+        self.rot_sample_grid = np.linspace(0, 2*np.pi, N_rot, endpoint=False,
+                dtype=np.float32)
+        self.rot_centers = np.linspace(0, 2*np.pi, rot_basis_size,
+                endpoint=False, dtype=np.float32)
+        self.rot_centers = np.concatenate([self.rot_centers] * kernel_size**2)
+        self.rot_centers = np.stack([self.rot_centers]*C_in)
+        self.rot_centers = np.expand_dims(self.rot_centers, axis=2)
+        self.rot_centers = torch.from_numpy(self.rot_centers).cuda()
+
+        self.weights = nn.Parameter(torch.randn(C_in, rot_basis_size *
+            kernel_size**2, C_out), requires_grad=True)
+        #with open('w.npy', 'rb') as f:
+        #    self.weights.data = torch.from_numpy(np.load(f))
+
+    def angle_dist(self, th1, th2):
+        return torch.remainder(th2-th1+np.pi, 2*np.pi) - np.pi
+
+    def kernel(self, theta):
+        '''
+        Return (C_out, C_in, N_rot, kernel_size, kernel_size)-shaped tensor.
+        It's values are sampled at positions corresponding to xx_sample_grid
+        and rot_sample_grid rotated by angle theta.
+        '''
+        # sample kernel values on spatial dimensions
+        xxs = rotate_xx_coordinates(self.xx_sample_grid, theta)
+        xxs = torch.from_numpy(xxs.reshape(self.kernel_size, self.kernel_size,
+            2, 1, 1)).cuda()
+        xx_diffs = self.xx_centers - xxs
+        xx_vals = torch.prod(B2(xx_diffs), dim = -3)
+
+        # sample kernel values on rotational dimension
+        rots = self.rot_sample_grid + theta
+        rots = torch.from_numpy(rots).cuda()
+        rot_diffs = torch.stack([self.angle_dist(r, self.rot_centers)
+                    for r in rots], dim=0)[...,0]
+        rot_vals = B2(rot_diffs / self.rot_scale)
+
+        xx_vals = xx_vals.unsqueeze(2)
+        rot_vals = rot_vals.unsqueeze(0).unsqueeze(0)
+        vals = xx_vals * rot_vals
+        vals = vals.unsqueeze(-1)
+        _weights = self.weights.reshape([1,1,1]+[*self.weights.shape])
+        return torch.sum(vals*_weights, axis=-2).permute(4,3,2,0,1)
+
+    def forward(self, X):
+        kernel_stack = torch.cat([self.kernel(-theta)
+            for theta in self.rot_sample_grid], dim=0)
+        n, c, d, h, w = kernel_stack.shape
+        kernel_stack = kernel_stack.reshape(n, c*d, h, w)
+        n, c, d, h, w = X.shape
+        X = X.reshape(n, c*d, h, w)
+        out = F.conv2d(X, kernel_stack, stride=self.stride, padding=self.padding, bias=None)
+        n, _, h, w = out.shape
+        out = out.reshape(n, len(self.rot_sample_grid), self.C_out, h, w)
+        out = out.transpose(1,2)
+        out = (2*np.pi / len(self.rot_sample_grid)) * out
+        return out
+
+l1 = Lift(C_out=3, kernel_size=5, N_rot=7).cuda()
+o1 = l1(torch.ones(1,3,14,14).cuda())
+l2 = LiftedConv(C_in = 5, C_out=9, kernel_size=5, N_rot=7,
+        rot_basis_size=13).cuda()
+o2 = l2(torch.ones(1,5,7,10,10).cuda())
+print(o2.sum(dim=(0,2,3,4)))
+print(o2.sum(dim=(0,1,3,4)))
