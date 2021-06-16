@@ -3,3 +3,8 @@
 data/*
 models/*
 architectures/gsplinenet/*
+*.swp
+*.jpeg
+*.jpg
+*.png
+*.txt
