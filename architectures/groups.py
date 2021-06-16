@@ -179,10 +179,10 @@ class Rshear(Group):
         return np.stack([x_new,y_new], axis=-1)
 
     def grid(N):
-        return np.array([1])#np.linspace(-1, 1, N, dtype=np.float32)
+        return np.linspace(-1, 1, N, dtype=np.float32)
 
     def scale(h_basis_size):
-        return 1# 1 / (h_basis_size//2)
+        return 1 / (h_basis_size//2)
 
     def prod(x1, x2):
         return x1 + x2

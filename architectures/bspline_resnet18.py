@@ -13,6 +13,15 @@ def conv1x1(in_planes, out_planes, N_h, h_basis_size, group, stride=1):
     return LiftedConv(in_planes, out_planes, 1, N_h, h_basis_size,
             group, stride=stride)
 
+class LogNorm(nn.Module):
+    def __init__(self):
+        super(LogNorm, self).__init__()
+        self.inorm = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
+
+    def forward(self, X):
+        return self.inorm(torch.log(X))
+
+
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, N_h, h_basis_size, group, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
@@ -45,10 +54,18 @@ class BasicBlock(nn.Module):
 
 
 class BsplineResNet18(nn.Module):
-    def __init__(self, N_h, h_basis_size, group, layer_sizes=[32,64,64,64], layers=[2,2,2,2], num_classes=10):
+    def __init__(self, N_h, h_basis_size, group,
+            inCBW=False, inGBW=False,
+            layer_sizes=[32,64,64,64], layers=[2,2,2,2], num_classes=10):
         super(BsplineResNet18, self).__init__()
         self.inplanes = layer_sizes[0]
 
+        if inCBW:
+            self.norm0 = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
+        elif inGBW:
+            self.norm0 = LogNorm()
+        else:
+            self.norm0 = nn.Identity()
         self.lift = Lift(3, self.inplanes, 7, N_h, group, stride=2, padding=3)
         self.bn1 = nn.BatchNorm3d(self.inplanes)
         self.relu = nn.ReLU(inplace=True)

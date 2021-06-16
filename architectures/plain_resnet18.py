@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torchsummary import summary
+from torchinfo import summary
 
 def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
@@ -8,6 +8,15 @@ def conv3x3(in_planes, out_planes, stride=1):
 
 def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
+class LogNorm(nn.Module):
+    def __init__(self):
+        super(LogNorm, self).__init__()
+        self.inorm = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
+
+    def forward(self, X):
+        return self.inorm(torch.log(X))
+
 
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None):
@@ -41,12 +50,16 @@ class BasicBlock(nn.Module):
 
 
 class PlainResNet18(nn.Module):
-    def __init__(self, layers=[2,2,2,2], num_classes=10):
+    def __init__(self, inCBW=False, inGBW=False, layers=[2,2,2,2], num_classes=10):
         super(PlainResNet18, self).__init__()
-        self.inplanes = 64
-        self.dilation = 1
-        self.groups = 1
-        self.base_width = 64
+        self.inplanes = 80
+
+        if inCBW:
+            self.norm0 = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
+        elif inGBW:
+            self.norm0 = LogNorm()
+        else:
+            self.norm0 = nn.Identity()
 
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(self.inplanes)
@@ -54,12 +67,12 @@ class PlainResNet18(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
         self.dropout = torch.nn.Dropout2d(p=0.25)
-        self.layer1 = self._make_layer(64, layers[0])
-        self.layer2 = self._make_layer(128, layers[1], stride=2)
+        self.layer1 = self._make_layer(80, layers[0])
+        self.layer2 = self._make_layer(160, layers[1], stride=2)
         self.layer3 = self._make_layer(256, layers[2], stride=2)
-        self.layer4 = self._make_layer(512, layers[3], stride=2)
+        self.layer4 = self._make_layer(256, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512, num_classes)
+        self.fc = nn.Linear(256, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -84,7 +97,8 @@ class PlainResNet18(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        y = self.conv1(x)
+        y = self.norm0(x)
+        y = self.conv1(y)
         y = self.bn1(y)
         y = self.relu(y)
         y = self.maxpool(y)
@@ -104,6 +118,6 @@ class PlainResNet18(nn.Module):
 
 
 if __name__ == '__main__':
-    net = PlainResNet18().cuda()
-    inp = (3,80,80)
+    net = PlainResNet18(invGBW=True).cuda()
+    inp = (1,3,80,80)
     print(summary(net, inp))
