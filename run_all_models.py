@@ -56,7 +56,7 @@ def make_data(data_path, jitter):
                                               num_workers=2)
     return train_data_loader, test_data_loader
 
-def train(net, opt, lossf, data):
+def train(net, opt, lossf, data, net_name):
     losses = []
     good, total = 0, 0
     net.train()
@@ -64,6 +64,8 @@ def train(net, opt, lossf, data):
         #torchvision.transforms.functional.to_pil_image(X[0]).show()
         #input()
         X, y = X.cuda(), y.cuda()
+        if 'GBW' in net_name:
+            X += 1/255
         opt.zero_grad()
         out = net(X)
         loss = lossf(out, y)
@@ -74,13 +76,15 @@ def train(net, opt, lossf, data):
         total += len(y)
     return torch.tensor(losses).float().mean().item(), (good/total*100).item()
 
-def test(net, lossf, data):
+def test(net, lossf, data, net_name):
     losses = []
     good, total = 0, 0
     net.eval()
     with torch.no_grad():
         for X, y in data:
             X, y = X.cuda(), y.cuda()
+            if 'GBW' in net_name:
+                X += 1/255
             out = net(X)
             loss = lossf(out, y)
             losses.append(loss.item())
@@ -105,8 +109,9 @@ def main():
             tr_L, te_L, tr_Acc, te_Acc = [], [], [], []
             for epoch in range(EPOCHS):
                 print(net_name, JITTER, epoch)
-                train_loss, train_acc = train(net, opt, lossf, train_data)
-                test_loss, test_acc = test(net, lossf, test_data)
+                train_loss, train_acc = train(net, opt, lossf, train_data,
+                        net_name)
+                test_loss, test_acc = test(net, lossf, test_data, net_name)
                 torch.save(net.state_dict(), f'{base_model_path}/{net_name}_{JITTER}.pth')
 
                 tr_L.append(train_loss); tr_Acc.append(train_acc)
