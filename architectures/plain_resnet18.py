@@ -106,7 +106,7 @@ class PlainResNet18(nn.Module):
         y = self.avgpool(y)
         y = torch.flatten(y, 1)
         y = self.fc(y)
-        return x
+        return y
 
 
 if __name__ == '__main__':
