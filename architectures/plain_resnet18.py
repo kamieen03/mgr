@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torchinfo import summary
+from norms import LogNorm
 
 def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
@@ -8,15 +9,6 @@ def conv3x3(in_planes, out_planes, stride=1):
 
 def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
-
-class LogNorm(nn.Module):
-    def __init__(self):
-        super(LogNorm, self).__init__()
-        self.inorm = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
-
-    def forward(self, X):
-        return self.inorm(torch.log(X))
-
 
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None):
@@ -118,6 +110,6 @@ class PlainResNet18(nn.Module):
 
 
 if __name__ == '__main__':
-    net = PlainResNet18(invGBW=True).cuda()
+    net = PlainResNet18(inGBW=True).cuda()
     inp = (1,3,80,80)
     print(summary(net, inp))

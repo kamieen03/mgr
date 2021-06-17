@@ -3,6 +3,7 @@ import torch.nn as nn
 from torchinfo import summary
 from bspline_kernel import Lift, LiftedConv, Projection
 from groups import SO2, Rplus, RplusContrast, Rshear
+from norms import LogNorm
 
 
 def conv3x3(in_planes, out_planes, N_h, h_basis_size, group, stride=1):
@@ -12,15 +13,6 @@ def conv3x3(in_planes, out_planes, N_h, h_basis_size, group, stride=1):
 def conv1x1(in_planes, out_planes, N_h, h_basis_size, group, stride=1):
     return LiftedConv(in_planes, out_planes, 1, N_h, h_basis_size,
             group, stride=stride)
-
-class LogNorm(nn.Module):
-    def __init__(self):
-        super(LogNorm, self).__init__()
-        self.inorm = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
-
-    def forward(self, X):
-        return self.inorm(torch.log(X))
-
 
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, N_h, h_basis_size, group, stride=1, downsample=None):
@@ -104,7 +96,8 @@ class BsplineResNet18(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        y = self.lift(x)
+        y = self.norm0(x)
+        y = self.lift(y)
         y = self.bn1(y)
         y = self.relu(y)
         y = self.maxpool(y)

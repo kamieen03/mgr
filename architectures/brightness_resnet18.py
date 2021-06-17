@@ -1,22 +1,13 @@
 import torch
 import torch.nn as nn
 from torchinfo import summary
+from norms import MeanNorm2d, IN2d
 
 def conv3x3(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
 
 def conv1x1(in_planes, out_planes, stride=1):
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
-
-class MeanNorm2d(nn.Module):
-    def __init__(self, cin):
-        super(MeanNorm2d, self).__init__()
-
-    def forward(self, X):   # X is [B,C,D,H,W]
-        return X - torch.mean(X, dim=(-3,-2,-1), keepdim=True)
-
-def IN2d(cin):
-    return nn.InstanceNorm2d(cin, affine=False, track_running_stats=False, eps=0)
 
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, norms=[]):
