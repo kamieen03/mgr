@@ -118,9 +118,7 @@ class Rplus(Group):
     def transform_tensor(X, scale):
         h, w = X.shape[-2:]
         if len(X.shape) == 4:
-            resized = torch_resize(X, [int(h*scale), int(w*scale)],
-                    interpolation = PIL.Image.BILINEAR)
-            return torch_center_crop(resized, [h,w])
+            return torch_affine(x, 0, (0,0), scale, (0,0), resample=PIL.Image.BILINEAR)
         elif len(X.shape) == 5:
             I = np.arange(X.shape[2])
             out = torch.stack([Rplus.transform_tensor(X[:,:,i,:,:], scale)
@@ -208,4 +206,33 @@ class Rshear(Group):
 
     def transform_kernel(kernel, h):
         return kernel
+
+class RplusGamma(Group):
+    def inv(s):
+        return 1/s
+
+    def transform_xx_coordinates(grid, s):
+        return grid
+
+    def grid(N):
+        return np.array([np.sqrt(2)**i for i in range(-(N//2), N//2+1)], dtype=np.float32)
+
+    def scale(h_basis_size):
+        return np.log(2)/2
+
+    def prod(s1, s2):
+        return s1 * s2
+
+    def dist(s1, s2):
+        return torch.log(s2/s1)
+
+    def det(s):
+        return 1
+
+    def transform_tensor(X, factor):
+        return X.sign() * X.abs()**factor
+
+    def transform_kernel(kernel, factor): #[N_out, N_in, H, W]
+        return RplusGamma.transform_tensor(kernel, factor)
+
 
