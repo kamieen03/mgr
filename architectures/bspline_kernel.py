@@ -189,7 +189,7 @@ class Projection(nn.Module):
         super(Projection, self).__init__()
 
     def forward(self, X):
-        return X.sum(dim=2)
+        return X.max(dim=2)[0]      # just values
 
 
 def value_test():
@@ -218,24 +218,24 @@ def equivariance_test():
         #X = torch.stack([aa]*3).unsqueeze(0)
         #X = torch.rand(1,3,100,100).cuda()
 
-        h = 1
+        h = np.pi/4
         ROLL = 0
-        N_h = 1
-        G = Rshear
+        N_h = 8
+        G = SO2
         SHOW = True
         l1 = Lift(C_in=3, C_out=3, kernel_size=5, N_h=N_h, group=G).cuda()
         l2 = LiftedConv(C_in=3, C_out=3, kernel_size=5, N_h=N_h, h_basis_size=N_h, group=G).cuda()
-        l1 = nn.Conv2d(3, 3, 5).cuda()
-        l2 = nn.Conv2d(3, 3, 5).cuda()
+        #l1 = nn.Conv2d(3, 3, 5).cuda()
+        #l2 = nn.Conv2d(3, 3, 5).cuda()
         #l2 = nn.Identity()
         o1 = G.transform_tensor(l2(l1(X)), h).cpu()
         o2 = l2(l1(G.transform_tensor(X, h))).cpu()
         o2 = torchvision.transforms.functional.center_crop(o2, o1.shape[-2:])
-        o1 = o1.unsqueeze(2)
-        o2 = o2.unsqueeze(2)
+        #o1 = o1.unsqueeze(2)
+        #o2 = o2.unsqueeze(2)
         o1 = o1.numpy()
         o2 = o2.numpy()
-
+        print(o1.shape, o2.shape)
         # value at particular position before rolling in depth dimension:
         x = np.arange(N_h)
         pos = X.shape[-1]//2

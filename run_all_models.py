@@ -4,54 +4,58 @@ import torchvision
 import torch
 from torchvision.transforms import Compose, RandomChoice, RandomOrder, ColorJitter, ToTensor, Normalize, Pad
 from torchvision.transforms import RandomCrop, RandomHorizontalFlip
+from torchvision.datasets import STL10, CIFAR10, CIFAR100
 import sys
 
 sys.path.append('architectures')
-from architectures.models import model_list
+from architectures.models import stl10_model_list, cifar_model_list
 
-
-non_jitter_train_transforms = Compose([
-    ToTensor(),
-    Pad(2),
-    RandomCrop(88),
-    RandomHorizontalFlip(p=0.5)
-])
-
-jitter_train_transforms = Compose([
-    RandomOrder([
-        RandomChoice([
-            ColorJitter(brightness=(0.2, 1.0)),
-            ColorJitter(brightness=(1.0, 5.0))
-        ]),
-        RandomChoice([
-            ColorJitter(contrast=(0.2, 1.0)),
-            ColorJitter(contrast=(1.0, 5.0))
-        ])
-    ]),
-    ToTensor(),
-    Pad(2),
-    RandomCrop(88),
-    RandomHorizontalFlip(p=0.5)
-])
-
-def make_data(data_path, jitter):
-    if jitter:
-        train_transforms = jitter_train_transforms
+def get_train_transforms(jitter, dataset):
+    if dataset == STL10:
+        crop_size = 88
     else:
-        train_transforms = non_jitter_train_transforms
-    test_transforms = Compose([
-        ToTensor(),
-    ])
-    _train_data = torchvision.datasets.STL10(data_path, split='train', download=True,
-                transform = train_transforms)
-    _test_data = torchvision.datasets.STL10(data_path, split='test', download=True,
-                transform = test_transforms)
+        crop_size = 32
+    if not jitter:
+        return Compose([
+            ToTensor(),
+            Pad(2),
+            RandomCrop(crop_size),
+            RandomHorizontalFlip(p=0.5)
+        ])
+    else:
+        return Compose([
+            RandomOrder([
+                RandomChoice([
+                    ColorJitter(brightness=(0.2, 1.0)),
+                    ColorJitter(brightness=(1.0, 5.0))
+                ]),
+                RandomChoice([
+                    ColorJitter(contrast=(0.2, 1.0)),
+                    ColorJitter(contrast=(1.0, 5.0))
+                ])
+            ]),
+            ToTensor(),
+            Pad(2),
+            RandomCrop(crop_size),
+            RandomHorizontalFlip(p=0.5)
+        ])
+
+def make_data(data_path, dataset, jitter):
+    train_transforms = get_train_transforms(jitter, dataset)
+    test_transforms = ToTensor()
+    if dataset == STL10:
+        _train_data = STL10(data_path, split='train', download=True, transform = train_transforms)
+        _test_data = STL10(data_path, split='test', download=True, transform = test_transforms)
+    else:
+        _train_data = dataset(data_path, train=True, download=True, transform = train_transforms)
+        _test_data = dataset(data_path, train=False, download=True, transform = test_transforms)
+
     train_data_loader = torch.utils.data.DataLoader(_train_data,
-                                              batch_size=128,
+                                              batch_size=256,
                                               shuffle=True,
                                               num_workers=2)
     test_data_loader = torch.utils.data.DataLoader(_test_data,
-                                              batch_size=128,
+                                              batch_size=256,
                                               shuffle=True,
                                               num_workers=2)
     return train_data_loader, test_data_loader
@@ -110,23 +114,41 @@ def main(argv):
         JITTER = False
     else:
         raise Exception('Wrong JITTER argument')
+    if argv[2] == 'stl10':
+        DATASET = STL10
+        model_list = stl10_model_list
+        NUM_CLASSES = 10
+    elif argv[2] == 'cifar10':
+        DATASET = CIFAR10
+        model_list = cifar_model_list
+        NUM_CLASSES = 10
+    elif argv[2] == 'cifar100':
+        DATASET = CIFAR100
+        model_list = cifar_model_list
+        NUM_CLASSES = 100
+    else:
+        raise Exception('Wrong dataset!')
+
     START_MODEL_NAME = None
+    START_EPOCH = 0
     start = True
-    if len(argv) > 2:
-        START_MODEL_NAME = argv[2]
-        START_EPOCH = int(argv[3])
+    if len(argv) > 3:
+        START_MODEL_NAME = argv[3]
+        START_EPOCH = int(argv[4])
         start = False
 
     EPOCHS = 150
-    base_model_path = '/content/drive/MyDrive/mgr/models'
-    base_runs_path = '/content/drive/MyDrive/mgr/runs'
-    data_path = '/content/stl10'
-    #base_model_path = 'models'
-    #base_runs_path = 'runs'
-    #data_path = 'data/stl10'
-    train_data, test_data = make_data(data_path, JITTER)
+    _dataset_str = argv[2]
+    base_model_path = f'/content/drive/MyDrive/mgr/models/{_dataset_str}'
+    base_runs_path = f'/content/drive/MyDrive/mgr/runs/{_dataset_str}'
+    data_path = f"/content/{_dataset_str}"
+    #base_model_path = f'models/{_dataset_str}'
+    #base_runs_path = f'runs/{_dataset_str}'
+    #data_path = f"data/{_dataset_str}"
+
+    train_data, test_data = make_data(data_path, DATASET, JITTER)
     lossf = torch.nn.CrossEntropyLoss()
-    for net, net_name in model_list():
+    for net, net_name in model_list(NUM_CLASSES):
         model_path = f'{base_model_path}/{net_name}_{JITTER}.pth'
         runs_path = f'{base_runs_path}/{net_name}_{JITTER}.txt'
         tr_L, te_L, tr_Acc, te_Acc = [], [], [], []
@@ -147,7 +169,7 @@ def main(argv):
 
                 tr_L.append(train_loss); tr_Acc.append(train_acc)
                 te_L.append(test_loss); te_Acc.append(test_acc)
-                with open(f'{base_runs_path}/{net_name}_{JITTER}.txt', 'w') as f:
+                with open(runs_path, 'w') as f:
                     f.write(str(tr_L)+'\n')
                     f.write(str(tr_Acc)+'\n')
                     f.write(str(te_L)+'\n')

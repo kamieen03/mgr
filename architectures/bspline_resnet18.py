@@ -44,6 +44,27 @@ class BasicBlock(nn.Module):
 
         return out
 
+class FinalBlock(nn.Module):
+    def __init__(self, cin, cout, big):
+        super(FinalBlock, self).__init__()
+        self.relu = nn.ReLU()
+        self.conv1 = nn.Conv2d(cin, cin, kernel_size=2, bias=True)
+        self.bn1 = nn.BatchNorm2d(cin)
+        self.big = big
+        if big:
+            self.conv2 = nn.Conv2d(cin, cout, kernel_size=2, bias=True)
+            self.bn2 = nn.BatchNorm2d(cout)
+
+    def forward(self, X):
+        Y = self.conv1(X)
+        Y = self.bn1(Y)
+        Y = self.relu(Y)
+        if self.big:
+            Y = self.conv2(Y)
+            Y = self.bn2(Y)
+            Y = self.relu(Y)
+        return Y
+
 
 class BsplineResNet18(nn.Module):
     def __init__(self, N_h, h_basis_size, group,
@@ -60,18 +81,20 @@ class BsplineResNet18(nn.Module):
             self.norm0 = nn.Identity()
         self.lift = Lift(3, self.inplanes, 7, N_h, group, stride=2, padding=3)
         self.bn1 = nn.BatchNorm3d(self.inplanes)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU(inplace=False)
         self.maxpool = nn.MaxPool3d(kernel_size=(1,3,3), stride=(1,2,2), padding=(0,1,1))
 
         self.dropout = torch.nn.Dropout3d(p=0.25)
         self.layer1 = self._make_layer(layer_sizes[0], layers[0], N_h, h_basis_size, group)
         self.layer2 = self._make_layer(layer_sizes[1], layers[1], N_h, h_basis_size, group, stride=2)
         self.layer3 = self._make_layer(layer_sizes[2], layers[2], N_h, h_basis_size, group, stride=2)
-        self.layer4 = self._make_layer(layer_sizes[3], layers[3], N_h, h_basis_size, group, stride=2)
+        self.layer4 = None
+        if len(layers) > 3:
+            self.layer4 = self._make_layer(layer_sizes[3], layers[3], N_h, h_basis_size, group, stride=2)
 
         self.projection = Projection()
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(layer_sizes[3], num_classes)
+        self.final_layer = FinalBlock(layer_sizes[-1], layer_sizes[-1], len(layers)>3)
+        self.fc = nn.Linear(layer_sizes[-1], num_classes)
 
        # for m in self.modules():
        #     if isinstance(m, nn.Conv2d):
@@ -106,12 +129,12 @@ class BsplineResNet18(nn.Module):
         y = self.layer2(y)
         y = self.dropout(y)
         y = self.layer3(y)
-        y = self.dropout(y)
-        y = self.layer4(y)
-        #y = self.dropout(y)
+        if self.layer4 is not None:
+            y = self.dropout(y)
+            y = self.layer4(y)
 
         y = self.projection(y)
-        y = self.avgpool(y)
+        y = self.final_layer(y)
         y = torch.flatten(y, 1)
         y = self.fc(y)
         return y

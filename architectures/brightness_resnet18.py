@@ -68,8 +68,11 @@ class BResNet18(nn.Module):
                 norms=(n[2],n[3]))
         self.layer3 = self._make_layer(256, layers[2], stride=2,
                 norms=(n[4],n[5]))
-        self.layer4 = self._make_layer(256, layers[3], stride=2,
-                norms=(n[6],n[7]))
+        self.layer4 = None
+        if len(layers) > 3:
+            self.layer4 = self._make_layer(256, layers[3], stride=2,
+                    norms=(n[6],n[7]))
+
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(256, num_classes)
 
@@ -104,9 +107,9 @@ class BResNet18(nn.Module):
         y = self.layer2(y)
         y = self.dropout(y)
         y = self.layer3(y)
-        y = self.dropout(y)
-        y = self.layer4(y)
-        y = self.dropout(y)
+        if self.layer4 is not None:
+            y = self.dropout(y)
+            y = self.layer4(y)
 
         y = self.avgpool(y)
         y = torch.flatten(y, 1)

@@ -62,7 +62,9 @@ class PlainResNet18(nn.Module):
         self.layer1 = self._make_layer(80, layers[0])
         self.layer2 = self._make_layer(160, layers[1], stride=2)
         self.layer3 = self._make_layer(256, layers[2], stride=2)
-        self.layer4 = self._make_layer(256, layers[3], stride=2)
+        self.layer4 = None
+        if len(layers)  > 3:
+            self.layer4 = self._make_layer(256, layers[3], stride=2)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(256, num_classes)
 
@@ -99,9 +101,9 @@ class PlainResNet18(nn.Module):
         y = self.layer2(y)
         y = self.dropout(y)
         y = self.layer3(y)
-        y = self.dropout(y)
-        y = self.layer4(y)
-        y = self.dropout(y)
+        if self.layer4 is not None:
+            y = self.dropout(y)
+            y = self.layer4(y)
 
         y = self.avgpool(y)
         y = torch.flatten(y, 1)
@@ -110,6 +112,6 @@ class PlainResNet18(nn.Module):
 
 
 if __name__ == '__main__':
-    net = PlainResNet18(inGBW=True).cuda()
-    inp = (1,3,80,80)
+    net = PlainResNet18(inGBW=False, layers=[3,3,2]).cuda()
+    inp = (1,3,32,32)
     print(summary(net, inp))
