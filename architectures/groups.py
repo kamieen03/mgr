@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import torch
+from torch import nn
 from torchvision.transforms.functional import rotate as torch_rotate
 from torchvision.transforms.functional import resize as torch_resize
 from torchvision.transforms.functional import center_crop as torch_center_crop
@@ -44,6 +45,10 @@ class Group(ABC):
 
     @abstractmethod
     def transform_kernel(kernel, h):
+        pass
+
+    @abstractmethod
+    def activation():
         pass
 
 
@@ -93,6 +98,9 @@ class SO2(Group):
     def transform_kernel(kernel, h):
         return kernel
 
+    def activation():
+        return nn.ReLU()
+
 class Rplus(Group):
     def inv(s):
         return 1/s
@@ -130,6 +138,9 @@ class Rplus(Group):
     def transform_kernel(kernel, h):
         return kernel
 
+    def activation():
+        return nn.ReLU()
+
 class RplusContrast(Group):
     def inv(s):
         return 1/s
@@ -164,6 +175,9 @@ class RplusContrast(Group):
 
     def transform_kernel(kernel, factor): #[N_out, N_in, H, W]
         return RplusContrast.transform_tensor(kernel, factor)
+
+    def activation():
+        return nn.Softsign()
 
 class Rshear(Group):
     def inv(x):
@@ -207,6 +221,9 @@ class Rshear(Group):
     def transform_kernel(kernel, h):
         return kernel
 
+    def activation():
+        return nn.ReLU()
+
 class RplusGamma(Group):
     def inv(s):
         return 1/s
@@ -234,5 +251,8 @@ class RplusGamma(Group):
 
     def transform_kernel(kernel, factor): #[N_out, N_in, H, W]
         return RplusGamma.transform_tensor(kernel, factor)
+
+    def activation():
+        return nn.Softsign()
 
 

@@ -3,7 +3,7 @@ import torch.nn as nn
 from torchinfo import summary
 from bspline_kernel import Lift, LiftedConv, Projection
 from groups import SO2, Rplus, RplusContrast, Rshear
-from norms import LogNorm
+from norms import LogNorm, MeanNorm2d
 
 
 def conv3x3(in_planes, out_planes, N_h, h_basis_size, group, stride=1):
@@ -20,7 +20,7 @@ class BasicBlock(nn.Module):
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, N_h, h_basis_size, group, stride)
         self.bn1 = nn.BatchNorm3d(planes)
-        self.relu = nn.ReLU(inplace=True)
+        self.activation = group.activation()
         self.conv2 = conv3x3(planes, planes, N_h, h_basis_size, group)
         self.bn2 = nn.BatchNorm3d(planes)
         self.downsample = downsample
@@ -31,7 +31,7 @@ class BasicBlock(nn.Module):
 
         out = self.conv1(x)
         out = self.bn1(out)
-        out = self.relu(out)
+        out = self.activation(out)
 
         out = self.conv2(out)
         out = self.bn2(out)
@@ -40,7 +40,7 @@ class BasicBlock(nn.Module):
             identity = self.downsample(x)
 
         out += identity
-        out = self.relu(out)
+        out = self.activation(out)
 
         return out
 
@@ -81,7 +81,7 @@ class BsplineResNet18(nn.Module):
             self.norm0 = nn.Identity()
         self.lift = Lift(3, self.inplanes, 7, N_h, group, stride=2, padding=3)
         self.bn1 = nn.BatchNorm3d(self.inplanes)
-        self.relu = nn.ReLU(inplace=False)
+        self.activation = group.activation()
         self.maxpool = nn.MaxPool3d(kernel_size=(1,3,3), stride=(1,2,2), padding=(0,1,1))
 
         self.dropout = torch.nn.Dropout3d(p=0.25)
@@ -122,7 +122,7 @@ class BsplineResNet18(nn.Module):
         y = self.norm0(x)
         y = self.lift(y)
         y = self.bn1(y)
-        y = self.relu(y)
+        y = self.activation(y)
         y = self.maxpool(y)
 
         y = self.layer1(y)

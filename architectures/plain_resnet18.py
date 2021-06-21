@@ -58,7 +58,7 @@ class PlainResNet18(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        self.dropout = torch.nn.Dropout2d(p=0.25)
+        self.dropout = torch.nn.Dropout2d(p=0.5)
         self.layer1 = self._make_layer(80, layers[0])
         self.layer2 = self._make_layer(160, layers[1], stride=2)
         self.layer3 = self._make_layer(256, layers[2], stride=2)
@@ -98,6 +98,7 @@ class PlainResNet18(nn.Module):
         y = self.maxpool(y)
 
         y = self.layer1(y)
+        y = self.dropout(y)
         y = self.layer2(y)
         y = self.dropout(y)
         y = self.layer3(y)
