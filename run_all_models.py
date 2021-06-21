@@ -9,6 +9,7 @@ import sys
 
 sys.path.append('architectures')
 from architectures.models import stl10_model_list, cifar_model_list
+from light_tests import run_light_tests
 
 def get_train_transforms(jitter, dataset):
     if dataset == STL10:
@@ -128,23 +129,28 @@ def main(argv):
         NUM_CLASSES = 100
     else:
         raise Exception('Wrong dataset!')
+    _dataset_str = argv[2]
+    if argv[3] == 'local':
+        base_model_path = f'models/{_dataset_str}'
+        base_runs_path = f'runs/{_dataset_str}'
+        base_results_path = f'results/{_dataset_str}'
+        data_path = f'data/{_dataset_str}'
+    elif argv[3] == 'g':
+        base_model_path = f'/content/drive/MyDrive/mgr/models/{_dataset_str}'
+        base_runs_path = f'/content/drive/MyDrive/mgr/runs/{_dataset_str}'
+        base_results_path = f'/content/drive/MyDrive/mgr/results/{_dataset_str}'
+        data_path = f'/content/{_dataset_str}'
+
 
     START_MODEL_NAME = None
     START_EPOCH = 0
     start = True
-    if len(argv) > 3:
-        START_MODEL_NAME = argv[3]
-        START_EPOCH = int(argv[4])
+    if len(argv) > 4:
+        START_MODEL_NAME = argv[4]
+        START_EPOCH = int(argv[5])
         start = False
 
     EPOCHS = 150
-    _dataset_str = argv[2]
-    base_model_path = f'/content/drive/MyDrive/mgr/models/{_dataset_str}'
-    base_runs_path = f'/content/drive/MyDrive/mgr/runs/{_dataset_str}'
-    data_path = f"/content/{_dataset_str}"
-    #base_model_path = f'models/{_dataset_str}'
-    #base_runs_path = f'runs/{_dataset_str}'
-    #data_path = f"data/{_dataset_str}"
 
     train_data, test_data = make_data(data_path, DATASET, JITTER)
     lossf = torch.nn.CrossEntropyLoss()
@@ -175,6 +181,7 @@ def main(argv):
                     f.write(str(te_L)+'\n')
                     f.write(str(te_Acc)+'\n')
             START_EPOCH = 0
+            run_light_tests(net, net_name, test_data, base_results_path, JITTER)
 
 if __name__ == '__main__':
     main(sys.argv)
