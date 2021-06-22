@@ -76,13 +76,12 @@ class ColorBalanceTest(LightTest):
     name = 'color_balance'
 
 class GammaTest(LightTest):
-    transform = RplusGamma.transform_tensor
+    transform = lambda x, a: x**a
     factors = 2**np.linspace(-np.log2(3), np.log2(3), 11)
     name = 'gamma'
 
 def run_light_tests(net, net_name, base_dataset, base_results_path, jitter):
     for Test in [ContrastTest, BrightnessTest, ColorBalanceTest, GammaTest]:
-        print(Test)
         loss, acc =  _abstract_test_multi(net, net_name, base_dataset,
                                           Test.transform,
                                           Test.factors)

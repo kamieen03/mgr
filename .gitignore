@@ -2,6 +2,8 @@
 *.npy
 data/*
 models/*
+results/*
+runs/*
 architectures/gsplinenet/*
 *.swp
 *.jpeg

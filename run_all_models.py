@@ -10,6 +10,7 @@ import sys
 sys.path.append('architectures')
 from architectures.models import stl10_model_list, cifar_model_list
 from light_tests import run_light_tests
+from dropbox_api import upload_all
 
 def get_train_transforms(jitter, dataset):
     if dataset == STL10:
@@ -182,6 +183,7 @@ def main(argv):
                     f.write(str(te_Acc)+'\n')
             START_EPOCH = 0
             run_light_tests(net, net_name, test_data, base_results_path, JITTER)
+            upload_all(net_name, JITTER, _dataset_str)
 
 if __name__ == '__main__':
     main(sys.argv)
