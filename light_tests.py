@@ -8,6 +8,19 @@ sys.path.append('architectures')
 from architectures.groups import RplusContrast, RplusGamma
 from abc import ABC
 
+def make_data(data_path, dataset, jitter):
+    test_transforms = ToTensor()
+    if dataset == STL10:
+        _test_data = STL10(data_path, split='test', download=True, transform = test_transforms)
+    else:
+        _test_data = dataset(data_path, train=False, download=True, transform = test_transforms)
+
+    test_data_loader = torch.utils.data.DataLoader(_test_data,
+                                              batch_size=256,
+                                              shuffle=True,
+                                              num_workers=2)
+    return test_data_loader
+
 
 def _abstract_test_single(net, net_name, base_dataset, transform, factor):
     losses = []
@@ -92,18 +105,35 @@ def run_light_tests(net, net_name, base_dataset, base_results_path, jitter):
 
 
 if __name__ == '__main__':
-    from torchvision.datasets import CIFAR10
+    from torchvision.datasets import CIFAR10, STL10, CIFAR100
     from torchvision.transforms import ToTensor
+    from architectures.models import stl10_model_list, cifar_model_list
+    from sys import argv
 
-    net = torch.nn.Sequential(
-            torch.nn.Flatten(),
-            torch.nn.Linear(3*32*32,10)
-            ).cuda()
-    data = CIFAR10('data/cifar10', train=False, download=True, transform = ToTensor())
-    data_loader = torch.utils.data.DataLoader(data,
-                                              batch_size=16,
-                                              shuffle=True,
-                                              num_workers=2)
-    run_light_tests(net, 'name', data_loader, 'results', False)
+    _dataset_str = argv[1]
+    dataset = {'stl10': STL10, 'cifar10': CIFAR10,
+            'cifar100': CIFAR100}[_dataset_str]
+    JITTER = {'False': False, 'True': True}[argv[2]]
+    base_model_path = f'/content/drive/MyDrive/mgr/models/{_dataset_str}'
+    base_results_path = f'/content/drive/MyDrive/mgr/results/{_dataset_str}'
+    data_path = f'/content/{_dataset_str}'
 
+    test_data = make_data(data_path, dataset, JITTER)
+
+    if 'cifar' in _dataset_str:
+        model_list = cifar_model_list
+    else:
+        model_list = stl10_model_list
+    if '100' in _dataset_str:
+        NUM_CLASSES = 100
+    else:
+        NUM_CLASSES = 10
+
+
+    for net, net_name in model_list(NUM_CLASSES):
+        model_path = f'{base_model_path}/{net_name}_{JITTER}.pth'
+        net = net.cuda()
+        net.load_state_dict(torch.load(model_path))
+        print(net_name)
+        run_light_tests(net, net_name, test_data, base_results_path, JITTER)
 
