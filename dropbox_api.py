@@ -1,9 +1,6 @@
 import dropbox
 from light_tests import ContrastTest, BrightnessTest, ColorBalanceTest, GammaTest
 
-KEY = 'XvcSI1B17IUAAAAAAAAAAYX9igu8pTp9twR3dFkULPKsNRfx6jcDQLHeiqc7yYHh'
-dbx = dropbox.Dropbox(KEY)
-
 def _upload(path):
     with open(path, 'rb') as f:
         data = f.read()
