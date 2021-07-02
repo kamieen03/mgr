@@ -58,6 +58,8 @@ class Lift(nn.Module):
             diffs = centers - xxs
             vals = torch.prod(B2(diffs), dim=-3).float()
             raw_spline_vals[h] = vals.unsqueeze(-1).cuda()
+            raw_spline_vals[h] = self.group.transform_kernel(raw_spline_vals[h],
+                                        self.group.inv(h))
         return raw_spline_vals
 
     def kernel(self, h):
@@ -69,7 +71,7 @@ class Lift(nn.Module):
         vals = self.raw_spline_vals[h]
         _weights = self.weights.unsqueeze(0).unsqueeze(0)
         kernel = (1/self.group.det(h)) * torch.sum(vals * _weights, axis=-2).permute(3,2,0,1)
-        return self.group.transform_kernel(kernel, h)
+        return kernel
 
     def forward(self, X):
         kernel_stack = torch.cat([self.kernel(h) for h in self.h_sample_points],
@@ -153,6 +155,8 @@ class LiftedConv(nn.Module):
             vals = xx_vals * h_vals
             vals = vals.unsqueeze(-1)
             raw_spline_vals[h] = vals.cuda()
+            raw_spline_vals[h] = self.group.transform_kernel(raw_spline_vals[h],
+                                        self.group.inv(h))
         return raw_spline_vals
 
 
