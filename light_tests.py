@@ -55,12 +55,12 @@ class LightTest(ABC):
     name = 'name'
 
 class ContrastTest(LightTest):
-    transform = RplusContrast.transform_tensor
+    transform = lambda x, a: torch.clip(RplusContrast.transform_tensor(x,a), 0, 1)
     factors = 2**np.linspace(np.log2(0.2), np.log2(5), 11)
     name = 'contrast'
 
 class BrightnessTest(LightTest):
-    transform = lambda x, a: x*a
+    transform = lambda x, a: torch.clip(x*a, 0, 1)
     factors = 2**np.linspace(np.log2(0.2), np.log2(5), 11)
     name = 'brightness'
 
