@@ -87,6 +87,10 @@ class BResNet18(nn.Module):
                 conv1x1(self.inplanes, planes, stride),
                 norms[0](planes)
             )
+        else:
+            downsample = nn.Sequential(
+                norms[0](planes)
+            )
 
         layers = []
         layers.append(BasicBlock(self.inplanes, planes, stride, downsample,
