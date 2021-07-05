@@ -17,5 +17,6 @@ class MeanNorm2d(nn.Module):
         return X - torch.mean(X, dim=(-3,-2,-1), keepdim=True)
 
 def IN2d(cin):
-    return nn.InstanceNorm2d(cin, affine=False, track_running_stats=False, eps=0)
+    return nn.InstanceNorm2d(cin, affine=False, track_running_stats=False,
+            eps=1e-6)
 
