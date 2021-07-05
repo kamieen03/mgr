@@ -253,7 +253,6 @@ class RplusGamma(Group):
         return RplusGamma.transform_tensor(kernel, factor)
 
     def activation():
-        return lambda x: torch.sign(x) * torch.abs(x)**0.3
         return nn.Softsign()
 
 
