@@ -26,15 +26,11 @@ def get_train_transforms(jitter, dataset):
         ])
     else:
         return Compose([
-            RandomOrder([
-                RandomChoice([
-                    ColorJitter(brightness=(0.2, 1.0)),
-                    ColorJitter(brightness=(1.0, 5.0))
-                ]),
-                RandomChoice([
-                    ColorJitter(contrast=(0.2, 1.0)),
-                    ColorJitter(contrast=(1.0, 5.0))
-                ])
+            RandomChoice([
+                ColorJitter(brightness=(0.5, 1.0)),
+                ColorJitter(brightness=(1.0, 2.0)),
+                ColorJitter(contrast=(0.5, 1.0)),
+                ColorJitter(contrast=(1.0, 2.0))
             ]),
             ToTensor(),
             Pad(2),
