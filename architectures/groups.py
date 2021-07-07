@@ -126,7 +126,7 @@ class Rplus(Group):
     def transform_tensor(X, scale):
         h, w = X.shape[-2:]
         if len(X.shape) == 4:
-            return torch_affine(x, 0, (0,0), scale, (0,0), resample=PIL.Image.BILINEAR)
+            return torch_affine(X, 0, (0,0), scale, (0,0), resample=PIL.Image.BILINEAR)
         elif len(X.shape) == 5:
             I = np.arange(X.shape[2])
             out = torch.stack([Rplus.transform_tensor(X[:,:,i,:,:], scale)
