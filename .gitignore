@@ -11,3 +11,4 @@ architectures/gsplinenet/*
 *.png
 *.txt
 *.onnx
+*.pth
