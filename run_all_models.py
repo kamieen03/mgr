@@ -64,8 +64,6 @@ def train(net, opt, lossf, data, net_name):
         #torchvision.transforms.functional.to_pil_image(X[0]).show()
         #input()
         X, y = X.cuda(), y.cuda()
-        if 'GBW' in net_name:
-            X += 1/255
         opt.zero_grad()
         out = net(X)
         loss = lossf(out, y)
@@ -83,8 +81,6 @@ def test(net, lossf, data, net_name):
     with torch.no_grad():
         for X, y in data:
             X, y = X.cuda(), y.cuda()
-            if 'GBW' in net_name:
-                X += 1/255
             out = net(X)
             loss = lossf(out, y)
             losses.append(loss.item())

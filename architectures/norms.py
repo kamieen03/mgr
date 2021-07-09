@@ -7,7 +7,7 @@ class LogNorm(nn.Module):
         self.inorm = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
 
     def forward(self, X):
-        return self.inorm(torch.log(X))
+        return self.inorm(torch.log(X+1/255))
 
 class MeanNorm2d(nn.Module):
     def __init__(self, cin):
