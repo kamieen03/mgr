@@ -30,8 +30,6 @@ def _abstract_test_single(net, net_name, base_dataset, transform, factor):
     with torch.no_grad():
         for X, y in base_dataset:
             X, y = X.cuda(), y.cuda()
-            if 'GBW' in net_name:
-                X += 1/255
             X = transform(X.cuda(), factor)
             out = net(X)
             loss = lossf(out, y)
