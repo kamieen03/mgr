@@ -4,7 +4,8 @@ from torch import nn
 class LogNorm(nn.Module):
     def __init__(self):
         super(LogNorm, self).__init__()
-        self.inorm = nn.InstanceNorm2d(3, affine=False, track_running_stats=False, eps=0)
+        self.inorm = nn.InstanceNorm2d(3, affine=False,
+                track_running_stats=False, eps=1e-6)
 
     def forward(self, X):
         return self.inorm(torch.log(X+1/255))
